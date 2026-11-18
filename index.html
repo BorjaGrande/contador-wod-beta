@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#09111e">
+  <meta name="description" content="Cronómetro de vueltas para entrenamientos. Funciona sin conexión, guarda la sesión y exporta resultados.">
+  <title>Contador WOD · Entrenamiento</title>
+  <link rel="stylesheet" href="./modes.css">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Contador WOD">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #09111e;
+      --panel: #121e30;
+      --panel-2: #17263a;
+      --line: #26364b;
+      --text: #f2f7ff;
+      --muted: #94a6bd;
+      --green: #43e7b0;
+      --green-dark: #12a879;
+      --blue: #6aaaff;
+      --red: #ff7e88;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(ellipse 90% 40% at 50% -5%, #153551 0%, transparent 75%), var(--bg);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button { font: inherit; -webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer; }
+    button:focus-visible { outline: 3px solid #b6d7ff; outline-offset: 4px; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    .app { width: min(100%, 510px); margin: auto; padding: max(28px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom)); }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .eyebrow { font-size: .72rem; letter-spacing: .16em; color: var(--muted); font-weight: 800; }
+    h1 { font-size: 1.35rem; line-height: 1.15; margin: 5px 0 0; letter-spacing: -.025em; }
+    .icon-btn { min-width: 82px; padding-inline: 10px; height: 44px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: .73rem; letter-spacing: .04em; font-weight: 850; }
+    .status { display: inline-flex; gap: 8px; align-items: center; margin: 30px 0 10px; color: var(--muted); text-transform: uppercase; font-weight: 800; font-size: .75rem; letter-spacing: .12em; }
+    .dot { height: 8px; width: 8px; border-radius: 100%; background: #7c90a7; }
+    .status.running .dot { background: var(--green); box-shadow: 0 0 0 5px #43e7b01c; }
+    .status.paused .dot { background: #ffca7a; }
+    .time { font-size: clamp(3.4rem, 14vw, 5rem); font-weight: 850; font-variant-numeric: tabular-nums; letter-spacing: -.055em; line-height: 1.1; white-space: nowrap; }
+    .lap-time-label { font-size: .76rem; letter-spacing: .12em; font-weight: 800; color: var(--muted); margin-top: 20px; }
+    .lap-time { font-size: 1.6rem; font-variant-numeric: tabular-nums; font-weight: 750; color: #a8d3ff; margin-top: 4px; }
+    .center { display: flex; flex-direction: column; align-items: center; }
+    .main-button {
+      position: relative; margin: 24px auto 20px; width: min(58vw, 228px); height: min(58vw, 228px); min-width: 196px; min-height: 196px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: 8px solid #143c35; border-radius: 50%;
+      background: linear-gradient(145deg, #78f8ca 0%, #2ed3a0 50%, #10a87a 100%);
+      box-shadow: 0 0 0 7px #1d554533, 0 14px 45px #00b77e33, inset 0 2px 5px #ffffff47;
+      color: #063b2d; transition: transform .12s ease, box-shadow .2s ease;
+    }
+    .main-button:active { transform: scale(.965); }
+    .main-button.running { color: #fff; border-color: #1c3760; background: linear-gradient(145deg, #83bbff, #478ff3 55%, #2964d4); box-shadow: 0 0 0 7px #26466c55, 0 16px 46px #286ce144; }
+    .main-text { font-size: clamp(1.6rem, 6vw, 2rem); font-weight: 900; letter-spacing: -.025em; }
+    .main-sub { margin-top: 7px; font-size: .78rem; font-weight: 750; opacity: .76; }
+    .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+    .secondary { min-height: 56px; border-radius: 16px; background: var(--panel-2); border: 1px solid #33465f; color: var(--text); font-weight: 850; font-size: .9rem; }
+    .secondary.pause { border-color: #3c6086; }
+    .secondary.reset { position: relative; overflow: hidden; border-color: #69434c; color: #ffc0c4; }
+    .secondary.reset .progress { position: absolute; inset: auto 0 0; height: 4px; background: var(--red); transform-origin: left; transform: scaleX(0); pointer-events: none; }
+    .secondary.reset.holding .progress { transform: scaleX(1); transition: transform 3s linear; }
+    .secondary.reset .reset-label { position: relative; z-index: 1; }
+    .help { text-align: center; color: var(--muted); font-size: .75rem; line-height: 1.5; margin: 10px 0 24px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    .stat { border: 1px solid var(--line); background: #121e30b8; padding: 14px 9px; border-radius: 14px; min-width: 0; }
+    .stat-name { font-size: .67rem; letter-spacing: .095em; color: var(--muted); font-weight: 800; }
+    .stat-value { font-size: clamp(.98rem, 4vw, 1.28rem); font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 7px; white-space: nowrap; }
+    .section-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 26px; margin-bottom: 11px; }
+    .section-title { font-weight: 850; font-size: 1rem; }
+    .count { color: var(--muted); font-size: .82rem; font-weight: 650; }
+    .lap-list { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
+    .lap-item { display: grid; grid-template-columns: minmax(80px,1fr) auto auto; gap: 12px; align-items: center; margin-bottom: 8px; padding: 13px 14px; border-radius: 13px; background: #131f30; border: 1px solid #26364b; font-variant-numeric: tabular-nums; }
+    .lap-item.best { border-color: #277b62; }
+    .lap-item.worst { border-color: #87464e; }
+    .lap-number { font-weight: 750; font-size: .88rem; }
+    .lap-badge { font-size: .64rem; display: inline-block; margin-top: 3px; color: var(--green); font-weight: 850; }
+    .lap-badge.slow { color: var(--red); }
+    .lap-duration { text-align: right; font-size: 1rem; font-weight: 820; }
+    .lap-total { text-align: right; font-size: .74rem; color: var(--muted); margin-top: 3px; }
+    .delta { min-width: 55px; text-align: right; font-size: .77rem; color: var(--muted); font-weight: 750; }
+    .delta.fast { color: var(--green); }
+    .delta.slow { color: var(--red); }
+    .empty { padding: 26px 14px; color: var(--muted); text-align: center; background: #121e3080; border: 1px dashed var(--line); border-radius: 15px; font-size: .89rem; }
+    .tools { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 13px; }
+    .tool { flex: 1; min-height: 42px; min-width: 130px; border-radius: 12px; background: transparent; border: 1px solid var(--line); color: #c6d7eb; font-size: .83rem; font-weight: 700; }
+    .footer { text-align: center; margin: 20px 0 0; color: #6f859e; font-size: .72rem; }
+    .toast { position: fixed; bottom: max(28px, env(safe-area-inset-bottom)); left: 50%; transform: translate(-50%, 15px); background: #233953; color: white; border: 1px solid #44627f; border-radius: 12px; padding: 12px 18px; opacity: 0; visibility: hidden; pointer-events: none; z-index: 20; transition: opacity .2s, transform .2s, visibility .2s; white-space: nowrap; max-width: calc(100vw - 25px); font-size: .85rem; }
+    .toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+    dialog { width: min(90vw, 360px); border: 1px solid #445870; border-radius: 18px; padding: 22px; color: var(--text); background: #162437; box-shadow: 0 24px 80px #0008; }
+    dialog::backdrop { background: #000b; }
+    dialog h2 { margin: 0 0 10px; font-size: 1.2rem; }
+    dialog p { color: var(--muted); line-height: 1.55; font-size: .92rem; }
+    .dialog-buttons { display: flex; gap: 10px; margin-top: 22px; }
+    .dialog-buttons button { border: 0; border-radius: 11px; min-height: 46px; flex: 1; color: white; font-weight: 800; background: #30435b; }
+    .dialog-buttons button.danger { background: #b8414f; }
+    @media (max-width: 360px) { .app { padding-inline: 14px; } .lap-item { gap: 6px; padding-inline: 10px; } .delta { min-width: 47px; } }
+    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } .secondary.reset.holding .progress { transition-duration: 3s !important; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <div>
+        <div class="eyebrow">ENTRENAMIENTO</div>
+        <h1 id="appTitle">Contador de vueltas</h1>
+      </div>
+      <div class="top-actions">
+        <button id="modeNavBtn" class="icon-btn" type="button" hidden>MODOS</button>
+        <button id="wodSoundBtn" class="icon-btn" type="button" hidden>SONIDO</button>
+        <button id="soundBtn" class="icon-btn" type="button" aria-label="Desactivar sonido" title="Activar/desactivar sonido">SONIDO</button>
+      </div>
+    </header>
+
+
+    <section id="modeSelectScreen" class="mode-picker" hidden aria-labelledby="modePickerHeading">
+      <div class="mode-intro">
+        <div class="eyebrow">CONTADOR WOD 2.2 · BETA</div>
+        <h2 id="modePickerHeading">¿Qué vas a entrenar?</h2>
+        <p>Elige una modalidad y configura el cronómetro.</p>
+      </div>
+      <div class="mode-grid">
+        <button type="button" class="mode-tile" data-mode="vueltas"><b>VUELTAS</b><small>Contador original 2.1</small></button>
+        <button type="button" class="mode-tile" data-mode="amrap"><b>AMRAP</b><small>Máximas rondas en un tiempo</small></button>
+        <button type="button" class="mode-tile" data-mode="fortime"><b>FOR TIME</b><small>Completar el trabajo</small></button>
+        <button type="button" class="mode-tile" data-mode="emom"><b>EMOM</b><small>Intervalos automáticos</small></button>
+        <button type="button" class="mode-tile" data-mode="tabata"><b>TABATA</b><small>Trabajo y descanso</small></button>
+      </div>
+      <section id="wodConfig" class="wod-panel" hidden>
+        <h3 id="configTitle">Configurar entrenamiento</h3>
+        <div class="config-row" data-config="amrap"><label for="amrapMinutes">Duración (minutos)</label><input id="amrapMinutes" type="number" min="1" max="180" step="1" value="20" inputmode="numeric"></div>
+        <div class="config-row" data-config="fortime"><label for="forTimeCap">Tiempo máximo (cap)</label><select id="forTimeCap"><option value="0">Sin límite</option><option value="10">10 minutos</option><option value="15">15 minutos</option><option value="20">20 minutos</option><option value="30">30 minutos</option><option value="40">40 minutos</option><option value="60">60 minutos</option></select></div>
+        <div class="config-row" data-config="emom"><label for="emomIntervals">Número de intervalos</label><input id="emomIntervals" type="number" min="1" max="120" step="1" value="12" inputmode="numeric"></div>
+        <div class="config-row" data-config="emom"><label for="emomSeconds">Segundos por intervalo</label><input id="emomSeconds" type="number" min="10" max="600" step="5" value="60" inputmode="numeric"></div>
+        <div class="config-row" data-config="tabata"><label for="tabataRounds">Rondas</label><input id="tabataRounds" type="number" min="1" max="60" step="1" value="8" inputmode="numeric"></div>
+        <div class="config-row" data-config="tabata"><label for="tabataWork">Trabajo (segundos)</label><input id="tabataWork" type="number" min="5" max="600" step="5" value="20" inputmode="numeric"></div>
+        <div class="config-row" data-config="tabata"><label for="tabataRest">Descanso (segundos)</label><input id="tabataRest" type="number" min="5" max="600" step="5" value="10" inputmode="numeric"></div>
+        <button id="prepareWodBtn" class="prepare-btn" type="button">PREPARAR ENTRENAMIENTO</button>
+      </section>
+      <label class="wake-toggle"><input id="keepScreenPicker" type="checkbox" checked> Mantener pantalla encendida mientras corre el tiempo</label>
+      <p class="mode-note">Las sesiones se guardan en este dispositivo. Los avisos sonoros requieren la aplicación visible.</p>
+    </section>
+
+    <div id="legacyScreen" hidden>
+    <section class="center" aria-label="Cronómetro">
+      <div id="status" class="status" aria-live="polite"><span class="dot"></span><span id="statusText">LISTO PARA EMPEZAR</span></div>
+      <div id="timer" class="time" role="timer" aria-label="Tiempo total">00:00.0</div>
+      <div id="currentLapLabel" class="lap-time-label">VUELTA ACTUAL · 1</div>
+      <div id="currentLap" class="lap-time">00:00.0</div>
+      <button id="mainBtn" type="button" class="main-button" aria-label="Iniciar cronómetro">
+        <span id="mainText" class="main-text">INICIAR</span>
+        <span id="mainSub" class="main-sub">Toca para empezar</span>
+      </button>
+    </section>
+
+    <div class="buttons">
+      <button id="pauseBtn" type="button" class="secondary pause" disabled>PAUSAR</button>
+      <button id="resetBtn" type="button" class="secondary reset" disabled>
+        <span class="reset-label" id="resetLabel">FINALIZAR</span><span class="progress" aria-hidden="true"></span>
+      </button>
+    </div>
+    <p class="help">Mantén FINALIZAR 3 segundos para reiniciar. Si lo tocas, se pedirá confirmación.</p>
+    <label class="wake-toggle"><input id="keepScreenLegacy" type="checkbox" checked> Mantener pantalla encendida</label>
+
+    <section aria-label="Estadísticas" class="stats">
+      <div class="stat"><div class="stat-name">ÚLTIMA</div><div id="lastStat" class="stat-value">—</div></div>
+      <div class="stat"><div class="stat-name">MEJOR</div><div id="bestStat" class="stat-value">—</div></div>
+      <div class="stat"><div class="stat-name">MEDIA</div><div id="avgStat" class="stat-value">—</div></div>
+    </section>
+
+    <section aria-labelledby="lapTitle">
+      <div class="section-head"><span id="lapTitle" class="section-title">Historial de vueltas</span><span id="lapCount" class="count">0 vueltas</span></div>
+      <ol id="lapList" class="lap-list"><li class="empty">Las vueltas aparecerán aquí al registrarlas.</li></ol>
+      <div class="tools">
+        <button id="undoBtn" type="button" class="tool" disabled>↶ Deshacer última</button>
+        <button id="exportBtn" type="button" class="tool" disabled>↓ Exportar CSV</button>
+      </div>
+    </section>
+
+    </div><!-- legacyScreen: código y controles originales intactos -->
+
+    <section id="wodScreen" class="wod-screen" hidden aria-label="Entrenamiento por modalidad">
+      <div class="wod-heading">
+        <div>
+          <div id="wodModeTitle" class="eyebrow">AMRAP</div>
+          <div id="wodModeDescription" class="wod-mode-description">20 minutos</div>
+        </div>
+        <button id="changeModeBtn" type="button" class="tool small-tool">Cambiar modo</button>
+      </div>
+      <section class="wod-clock center" aria-live="off">
+        <div id="wodStatus" class="status"><span class="dot"></span><span id="wodStatusText">LISTO</span></div>
+        <div id="wodTimer" class="time" role="timer">20:00.0</div>
+        <div class="wod-progress"><div id="wodProgressFill"></div></div>
+        <div id="wodPhase" class="wod-phase">Ronda 1</div>
+        <div id="wodSubTime" class="lap-time">00:00.0</div>
+        <button id="wodMainBtn" type="button" class="main-button" aria-label="Iniciar entrenamiento"><span id="wodMainText" class="main-text">INICIAR</span><span id="wodMainSub" class="main-sub">Toca para empezar</span></button>
+      </section>
+      <div class="buttons">
+        <button id="wodPauseBtn" type="button" class="secondary pause" disabled>PAUSAR</button>
+        <button id="wodFinishBtn" type="button" class="secondary reset" disabled>FINALIZAR WOD</button>
+      </div>
+      <label class="wake-toggle"><input id="keepScreenWod" type="checkbox" checked> Mantener pantalla encendida</label>
+      <div class="wod-panel wod-summary" id="wodScorePanel">
+        <div class="stat-name">RESULTADO</div>
+        <div id="wodScore" class="wod-score">Sin comenzar</div>
+        <div id="wodResultDetails" class="wod-result-detail"></div>
+        <div id="repsBox" class="config-row" hidden><label for="extraReps">Repeticiones adicionales</label><input id="extraReps" type="number" min="0" max="999" step="1" value="0" inputmode="numeric"></div>
+      </div>
+      <div class="section-head"><span class="section-title" id="wodHistoryTitle">Registro</span><span id="wodCount" class="count">0 rondas</span></div>
+      <ol id="wodHistory" class="lap-list"><li class="empty">Comienza tu sesión para registrar el entrenamiento.</li></ol>
+      <div class="tools">
+        <button id="wodUndoBtn" type="button" class="tool" disabled>↶ Deshacer última</button>
+        <button id="wodExportBtn" type="button" class="tool" disabled>↓ Exportar CSV</button>
+        <button id="wodResetBtn" type="button" class="tool">Reiniciar sesión</button>
+      </div>
+      <p class="wod-note">Los avisos sonoros dependen de iOS y de que la aplicación esté visible. No son alarmas en segundo plano.</p>
+    </section>
+    <p class="footer">La sesión se guarda en este dispositivo · <span id="offlineStatus">Preparando modo sin conexión…</span><br>Contador WOD 2.2 · Beta</p>
+  </main>
+
+  <dialog id="confirmDialog" aria-labelledby="dialogTitle">
+    <h2 id="dialogTitle">¿Reiniciar el contador?</h2>
+    <p>Se borrarán las vueltas de esta sesión. Puedes exportarlas antes si quieres conservarlas.</p>
+    <div class="dialog-buttons">
+      <button id="cancelReset" type="button">Cancelar</button>
+      <button id="confirmReset" type="button" class="danger">Reiniciar</button>
+    </div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  // Conserva la clave y el estado del contador 2.1: solo se añade un ajuste opcional.
+  try { window.contadorWakeEnabled = JSON.parse(localStorage.getItem('contador-wod-v2.2-preferences-beta-preview') || '{}').keepAwake !== false; }
+  catch (_) { window.contadorWakeEnabled = true; }
+  </script>
+  <script>
+  (() => {
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const timerEl = $('timer'), currentLapEl = $('currentLap'), currentLapLabel = $('currentLapLabel'), mainBtn = $('mainBtn');
+    const mainText = $('mainText'), mainSub = $('mainSub'), statusEl = $('status'), statusText = $('statusText');
+    const pauseBtn = $('pauseBtn'), resetBtn = $('resetBtn'), resetLabel = $('resetLabel');
+    const lapList = $('lapList'), lapCount = $('lapCount');
+    const lastStat = $('lastStat'), bestStat = $('bestStat'), avgStat = $('avgStat');
+    const undoBtn = $('undoBtn'), exportBtn = $('exportBtn'), soundBtn = $('soundBtn');
+    const dialog = $('confirmDialog'), toastEl = $('toast');
+
+    const STORAGE_KEY = 'contador-vueltas-v2-beta-preview';
+    let state = 'idle';             // idle | running | paused
+    let elapsedBeforeRun = 0;      // milisegundos acumulados antes de arrancar
+    let monotonicStart = 0;        // marca de performance.now() al arrancar
+    let wallStart = 0;             // marca de Date.now() para recuperar tras recargar
+    let splits = [];              // tiempos totales de cada vuelta (ms)
+    let rafId = 0;
+    let wakeLock = null;
+    let soundEnabled = true;
+    let audioCtx = null;
+    let toastTimer = 0;
+    let holding = false;
+    let holdTimeout = 0;
+    let holdFrame = 0;
+    let holdStarted = 0;
+    let suppressResetClick = false;
+
+    function formatTime(ms) {
+      const deciseconds = Math.floor(Math.max(0, ms) / 100);
+      const d = deciseconds % 10;
+      const totalSeconds = Math.floor(deciseconds / 10);
+      const s = totalSeconds % 60;
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      if (totalMinutes >= 60) {
+        const h = Math.floor(totalMinutes / 60), m = totalMinutes % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${d}`;
+      }
+      return `${String(totalMinutes).padStart(2, '0')}:${String(s).padStart(2, '0')}.${d}`;
+    }
+
+    function totalElapsed() {
+      return state === 'running'
+        ? elapsedBeforeRun + (performance.now() - monotonicStart)
+        : elapsedBeforeRun;
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          state, elapsed: elapsedBeforeRun, wallStart, splits, soundEnabled
+        }));
+      } catch (_) { /* almacenamiento no disponible: cronómetro sigue operativo */ }
+    }
+
+    function load() {
+      try {
+        const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (!data || !['idle', 'running', 'paused'].includes(data.state) || !Array.isArray(data.splits)) return;
+        const validSplits = data.splits.every((x, i, a) =>
+          Number.isFinite(x) && x >= 0 && (i === 0 || x > a[i - 1]));
+        if (!validSplits || !Number.isFinite(data.elapsed) || data.elapsed < 0) return;
+        splits = data.splits;
+        elapsedBeforeRun = data.elapsed;
+        state = data.state;
+        if (typeof data.soundEnabled === 'boolean') soundEnabled = data.soundEnabled;
+        if (state === 'running') {
+          // Date.now permite incluir el tiempo transcurrido mientras la pestaña estuvo cerrada.
+          const gap = Number.isFinite(data.wallStart) ? Math.max(0, Date.now() - data.wallStart) : 0;
+          elapsedBeforeRun += gap;
+          monotonicStart = performance.now();
+          wallStart = Date.now();
+        }
+        if (state === 'idle') { elapsedBeforeRun = 0; splits = []; }
+      } catch (_) { /* sesión nueva si los datos están dañados */ }
+    }
+
+    async function keepAwake() {
+      try {
+        if (state === 'running' && window.contadorWakeEnabled !== false && 'wakeLock' in navigator && !wakeLock) {
+          const lock = await navigator.wakeLock.request('screen');
+          if (state !== 'running') { await lock.release(); return; }
+          wakeLock = lock;
+          lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
+        }
+      } catch (_) { /* no disponible en todos los navegadores */ }
+    }
+
+    function letSleep() {
+      if (wakeLock) { const lock = wakeLock; wakeLock = null; lock.release().catch(() => {}); }
+    }
+
+    function beep(frequency = 920, duration = .08) {
+      if (!soundEnabled) return;
+      try {
+        const Audio = window.AudioContext || window.webkitAudioContext;
+        if (!Audio) return;
+        if (!audioCtx || audioCtx.state === 'closed') audioCtx = new Audio();
+        const context = audioCtx;
+        function play() {
+          if (context !== audioCtx || context.state !== 'running') return;
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.type = 'sine'; oscillator.frequency.value = frequency;
+          const now = context.currentTime;
+          gain.gain.setValueAtTime(.14, now);
+          gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+          oscillator.connect(gain); gain.connect(context.destination);
+          oscillator.start(now); oscillator.stop(now + duration);
+        }
+        if (context.state !== 'running') context.resume().then(play).catch(() => {});
+        else play();
+      } catch (_) { /* audio bloqueado o no compatible */ }
+    }
+
+    function vibrate(pattern = 25) {
+      try { navigator.vibrate?.(pattern); } catch (_) {}
+    }
+
+    function toast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+    }
+
+    function renderClock() {
+      const total = totalElapsed();
+      const lastSplit = splits.length ? splits[splits.length - 1] : 0;
+      timerEl.textContent = formatTime(total);
+      currentLapEl.textContent = formatTime(Math.max(0, total - lastSplit));
+    }
+
+    function tick() {
+      if (state !== 'running') return;
+      renderClock();
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function renderUI() {
+      statusEl.className = `status ${state}`;
+      statusText.textContent = state === 'idle' ? 'LISTO PARA EMPEZAR' : state === 'running' ? 'CRONÓMETRO EN MARCHA' : 'EN PAUSA';
+      mainBtn.classList.toggle('running', state === 'running');
+      mainText.textContent = state === 'idle' ? 'INICIAR' : state === 'running' ? '+ VUELTA' : 'CONTINUAR';
+      mainSub.textContent = state === 'idle' ? 'Toca para empezar' : state === 'running' ? 'Toca al completar' : 'Reanudar tiempo';
+      mainBtn.setAttribute('aria-label', state === 'idle' ? 'Iniciar cronómetro' : state === 'running' ? 'Registrar vuelta' : 'Continuar cronómetro');
+      currentLapLabel.textContent = `VUELTA ACTUAL · ${state === 'idle' ? 1 : splits.length + 1}`;
+      pauseBtn.textContent = state === 'paused' ? 'REANUDAR' : 'PAUSAR';
+      pauseBtn.disabled = state === 'idle';
+      resetBtn.disabled = state === 'idle';
+      undoBtn.disabled = splits.length === 0;
+      exportBtn.disabled = splits.length === 0;
+      soundBtn.textContent = soundEnabled ? 'SONIDO' : 'SILENCIO';
+      soundBtn.setAttribute('aria-label', soundEnabled ? 'Desactivar sonido' : 'Activar sonido');
+      renderClock();
+    }
+
+    function renderLaps() {
+      const durations = splits.map((value, i) => value - (i > 0 ? splits[i - 1] : 0));
+      const count = durations.length;
+      lapCount.textContent = `${count} ${count === 1 ? 'vuelta' : 'vueltas'}`;
+      if (!count) {
+        lapList.innerHTML = '<li class="empty">Las vueltas aparecerán aquí al registrarlas.</li>';
+        lastStat.textContent = bestStat.textContent = avgStat.textContent = '—';
+        renderUI();
+        return;
+      }
+      const best = Math.min(...durations), worst = Math.max(...durations);
+      lastStat.textContent = formatTime(durations[count - 1]);
+      bestStat.textContent = formatTime(best);
+      avgStat.textContent = formatTime(splits[count - 1] / count);
+      // textContent en lugar de HTML dinámico con datos de usuario.
+      lapList.replaceChildren();
+      for (let i = count - 1; i >= 0; i--) {
+        const duration = durations[i];
+        const isBest = count > 1 && duration === best && best !== worst;
+        const isWorst = count > 1 && duration === worst && best !== worst;
+        const row = document.createElement('li');
+        row.className = `lap-item${isBest ? ' best' : ''}${isWorst ? ' worst' : ''}`;
+        const left = document.createElement('div');
+        const name = document.createElement('div'); name.className = 'lap-number'; name.textContent = `Vuelta ${i + 1}`;
+        left.appendChild(name);
+        if (isBest || isWorst) {
+          const badge = document.createElement('span');
+          badge.className = `lap-badge${isWorst ? ' slow' : ''}`;
+          badge.textContent = isBest ? 'MEJOR' : 'MÁS LENTA'; left.appendChild(badge);
+        }
+        const center = document.createElement('div');
+        const time = document.createElement('div'); time.className = 'lap-duration'; time.textContent = formatTime(duration);
+        const cumulative = document.createElement('div'); cumulative.className = 'lap-total'; cumulative.textContent = `Total ${formatTime(splits[i])}`;
+        center.append(time, cumulative);
+        const delta = document.createElement('span'); delta.className = 'delta';
+        if (i > 0) {
+          const change = duration - durations[i - 1];
+          delta.textContent = `${change > 0 ? '+' : change < 0 ? '−' : '='}${formatTime(Math.abs(change))}`;
+          if (change !== 0) delta.classList.add(change < 0 ? 'fast' : 'slow');
+          delta.title = change < 0 ? 'Más rápida que la anterior' : change > 0 ? 'Más lenta que la anterior' : 'Igual a la anterior';
+        } else { delta.textContent = '—'; }
+        row.append(left, center, delta);
+        lapList.appendChild(row);
+      }
+      renderUI();
+    }
+
+    function start() {
+      if (state === 'running') return;
+      monotonicStart = performance.now();
+      wallStart = Date.now();
+      state = 'running';
+      save(); renderUI();
+      cancelAnimationFrame(rafId); tick(); keepAwake();
+      beep(880); vibrate(20);
+    }
+
+    function pause() {
+      if (state !== 'running') return;
+      elapsedBeforeRun = totalElapsed();
+      state = 'paused'; wallStart = 0;
+      cancelAnimationFrame(rafId); letSleep();
+      save(); renderUI(); beep(550); vibrate(30);
+    }
+
+    function lap() {
+      if (state !== 'running') return;
+      const t = Math.round(totalElapsed());
+      const prev = splits.length ? splits[splits.length - 1] : 0;
+      if (t - prev < 250) { toast('Espera un instante antes de otra vuelta'); return; }
+      splits.push(t);
+      save(); renderLaps(); beep(1250, .11); vibrate([25, 35, 25]);
+    }
+
+    function undo() {
+      if (!splits.length) return;
+      splits.pop(); save(); renderLaps(); toast('Última vuelta eliminada');
+      vibrate(15);
+    }
+
+    function reset() {
+      cancelHold();
+      cancelAnimationFrame(rafId); letSleep();
+      state = 'idle'; elapsedBeforeRun = 0; monotonicStart = 0; wallStart = 0; splits = [];
+      save(); renderLaps();
+      if (dialog.open) dialog.close();
+      beep(480, .18); vibrate([50, 40, 70]);
+      toast('Sesión reiniciada');
+    }
+
+    function startHold(event) {
+      if (resetBtn.disabled || event.button !== 0) return;
+      holding = true;
+      holdStarted = performance.now();
+      // Forzar el estado inicial antes de activar la transición del progreso.
+      resetBtn.classList.remove('holding');
+      void resetBtn.offsetWidth;
+      resetBtn.classList.add('holding');
+      resetLabel.textContent = '3.0 s';
+      function updateHold() {
+        if (!holding) return;
+        const left = Math.max(0, (3000 - (performance.now() - holdStarted)) / 1000);
+        resetLabel.textContent = `${left.toFixed(1)} s`;
+        holdFrame = requestAnimationFrame(updateHold);
+      }
+      holdFrame = requestAnimationFrame(updateHold);
+      clearTimeout(holdTimeout);
+      holdTimeout = setTimeout(() => {
+        if (!holding) return;
+        suppressResetClick = true;
+        setTimeout(() => { suppressResetClick = false; }, 1500);
+        reset();
+      }, 3000);
+    }
+
+    function cancelHold() {
+      holding = false;
+      clearTimeout(holdTimeout);
+      cancelAnimationFrame(holdFrame);
+      resetBtn.classList.remove('holding');
+      resetLabel.textContent = 'FINALIZAR';
+    }
+
+    function openResetDialog() {
+      if (resetBtn.disabled) return;
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else if (window.confirm('¿Reiniciar y borrar las vueltas?')) reset();
+    }
+
+    function exportCSV() {
+      if (!splits.length) return;
+      const rows = [
+        ['Vuelta', 'Duración', 'Tiempo acumulado', 'Diferencia con la anterior'],
+      ];
+      for (let i = 0; i < splits.length; i++) {
+        const t = splits[i] - (i ? splits[i - 1] : 0);
+        const prev = i > 0 ? splits[i - 1] - (i > 1 ? splits[i - 2] : 0) : null;
+        rows.push([String(i + 1), formatTime(t), formatTime(splits[i]), prev === null ? '' : `${t - prev >= 0 ? '+' : '-'}${formatTime(Math.abs(t - prev))}`]);
+      }
+      rows.push(['TOTAL', formatTime(totalElapsed()), '', '']);
+      const content = '\uFEFF' + rows.map(r => r.join(';')).join('\r\n');
+      const file = new Blob([content], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(file);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `vueltas_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      toast('Resultados exportados');
+    }
+
+    mainBtn.addEventListener('click', () => state === 'running' ? lap() : start());
+    pauseBtn.addEventListener('click', () => state === 'running' ? pause() : state === 'paused' ? start() : undefined);
+    undoBtn.addEventListener('click', undo);
+    exportBtn.addEventListener('click', exportCSV);
+    soundBtn.addEventListener('click', () => { soundEnabled = !soundEnabled; save(); renderUI(); if (soundEnabled) beep(); });
+
+    resetBtn.addEventListener('pointerdown', startHold);
+    resetBtn.addEventListener('pointerup', cancelHold);
+    resetBtn.addEventListener('pointercancel', cancelHold);
+    resetBtn.addEventListener('pointerleave', cancelHold);
+    resetBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+    resetBtn.addEventListener('click', () => {
+      if (suppressResetClick) { suppressResetClick = false; return; }
+      openResetDialog();
+    });
+    $('cancelReset').addEventListener('click', () => dialog.close());
+    $('confirmReset').addEventListener('click', reset);
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+
+    document.addEventListener('keydown', (event) => {
+      if (dialog.open || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      const tag = event.target?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(tag) || event.target?.isContentEditable) return;
+      if (event.code === 'Space') { event.preventDefault(); state === 'running' ? lap() : start(); }
+      else if (event.key.toLowerCase() === 'p' && state !== 'idle') { state === 'running' ? pause() : start(); }
+      else if (event.key.toLowerCase() === 'z') undo();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && state === 'running') {
+        keepAwake();
+        renderClock();
+      }
+    });
+    window.addEventListener('pagehide', letSleep);
+    document.addEventListener('contador-wake-change', () => { if (window.contadorWakeEnabled === false) letSleep(); else keepAwake(); });
+
+    load();
+    renderLaps();
+    if (state === 'running') { tick(); keepAwake(); save(); }
+  })();
+  </script>
+  <script defer src="./modes.js"></script>
+  <script>
+  // Registra el trabajador de servicio para abrir la app sin conexión.
+  (() => {
+    const status = document.getElementById('offlineStatus');
+    if (!('serviceWorker' in navigator)) {
+      status.textContent = 'Este navegador no admite modo sin conexión';
+      return;
+    }
+    window.addEventListener('load', async () => {
+      try {
+        await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        await navigator.serviceWorker.ready;
+        status.textContent = 'Modo sin conexión preparado';
+      } catch (error) {
+        status.textContent = 'Modo sin conexión pendiente: abre con internet';
+        console.warn('No se pudo activar el modo sin conexión', error);
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
