@@ -1,3 +1,11 @@
+# Contador WOD 2.2.6 Beta — CAP en segundos y transferencia precisa
+
+Base: 2.2.5 Beta validada. FOR TIME manual: CAP de 00:01 a 60:00, 00:00 sin límite. Acepta enlaces del Generador 1.0.22 con `capseconds` y antiguos con `cap` en minutos. Mantiene compatibilidad con sesiones antiguas, objetivo de rondas y finalización por CAP. Los resultados se muestran con décimas y se transmiten con milisegundos exactos. No modifica los cronómetros de otros formatos ni las claves de almacenamiento.
+
+Instalación: finalizar/exportar entrenamientos necesarios, sustituir los nueve archivos de la raíz del repositorio `contador-wod-beta`, comprobar versión y después actualizar Generador a 1.0.22 Beta. No borrar datos ni tocar repositorios estables. Validación de sintaxis, límites CAP, compatibilidad de configuraciones antiguas y precisión del protocolo con Node.js/DOM simulado. Navegación Chromium bloqueada: pendiente validación real de cronómetro y formulario en iPhone. No publicado.
+
+---
+
 # Contador WOD 2.2.5 Beta — Finalización FOR TIME por rondas
 
 Actualización sobre 2.2.4 Beta. Los enlaces nuevos del Generador 1.0.21 Beta incluyen el objetivo de rondas. El contador muestra el progreso, termina al registrar la última ronda y conserva exactamente su tiempo como resultado. El botón de registro queda desactivado. CAP o detención manual anterior al objetivo: resultado incompleto. Los FOR TIME independientes o enlaces antiguos sin objetivo siguen permitiendo finalizar manualmente. No se altera la clave de sesión ni se reinterpretan los entrenamientos históricos. No se modifica el cronómetro TABATA, EMOM, AMRAP ni el modo Vueltas original.

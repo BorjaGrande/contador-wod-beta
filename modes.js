@@ -1,4 +1,4 @@
-/* Contador WOD 2.2.5 Beta: ejercicios y estadísticas de rendimiento. */
+/* Contador WOD 2.2.6 Beta: ejercicios y estadísticas de rendimiento. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -94,17 +94,17 @@
   function transferResultUrl(session=current) {
     if(!session||session.status!=='finished'||session.source!=='generador-wod'||!session.sourceWod)return null;
     const t=Math.max(0,Math.round(session.elapsedBeforeRun));
-    const minutes=Math.floor(t/60000), sec=String(Math.floor(t/1000)%60).padStart(2,'0');
+    const measured=format(t);
     let result;
-    if(session.mode==='amrap')result=`${session.splits.length} rondas${session.extraReps?' + '+session.extraReps+' reps':''} · ${minutes}:${sec}`;
+    if(session.mode==='amrap')result=`${session.splits.length} rondas${session.extraReps?' + '+session.extraReps+' reps':''} · ${measured}`;
     else if(session.mode==='fortime'){
       const target=session.config.targetRounds;
       const count=target?`${session.splits.length}/${target} rondas`:`${session.splits.length} vueltas marcadas`;
       const label=session.finishReason==='limit'?'CAP':session.finishReason==='goal'?'FOR TIME':target?'FOR TIME incompleto':'FOR TIME';
-      result=`${label} ${minutes}:${sec} · ${count}${target&&session.finishReason==='limit'?' · Incompleto':''}`;
+      result=`${label} ${measured} · ${count}${target&&session.finishReason==='limit'?' · Incompleto':''}`;
     }
-    else if(session.mode==='emom')result=`EMOM ${session.doneIntervals.length}/${session.config.intervals} intervalos marcados · ${minutes}:${sec}`;
-    else result=`TABATA ${session.finishReason==='limit'?'completado':'detenido'} · ${minutes}:${sec}`;
+    else if(session.mode==='emom')result=`EMOM ${session.doneIntervals.length}/${session.config.intervals} intervalos marcados · ${measured}`;
+    else result=`TABATA ${session.finishReason==='limit'?'completado':'detenido'} · ${measured}`;
     const payload={version:1,from:'contador-wod',runId:session.runId||'cw-'+session.finishedAt,
       finishedAt:session.finishedAt,elapsedMs:t,finishReason:session.finishReason,
       mode:session.mode,splitsCount:session.splits.length,extraReps:session.extraReps||0,
@@ -140,7 +140,11 @@
     const mode=q.get('mode');
     let config;
     if(mode==='amrap')config={minutes:read('minutes',1,180)};
-    else if(mode==='fortime')config={capMinutes:read('cap',0,60),...(q.has('rounds')?{targetRounds:read('rounds',1,100)}:{})};
+    else if(mode==='fortime'){
+      const capSeconds=q.has('capseconds')?read('capseconds',0,3600):read('cap',0,60)*60;
+      if(q.has('capseconds')&&q.has('cap')&&read('cap',0,60)*60!==capSeconds)throw new Error('CAP contradictorio.');
+      config={capSeconds,...(q.has('rounds')?{targetRounds:read('rounds',1,100)}:{})};
+    }
     else if(mode==='emom')config={intervals:read('intervals',1,120),seconds:read('seconds',10,600)};
     else if(mode==='tabata'){
       const rounds=read('rounds',1,60),work=read('work',5,600),rest=read('rest',5,600);
@@ -263,11 +267,13 @@
   }
   const vibrate = pattern => { try { navigator.vibrate?.(pattern); } catch (_) {} };
 
+  // Compatibilidad con las sesiones guardadas antes de 2.2.6.
+  const getCapSeconds=c=>c.capSeconds??(c.capMinutes*60);
   function totalDuration(session = current) {
     if (!session) return null;
     const c = session.config;
     if (session.mode === 'amrap') return c.minutes * 60000;
-    if (session.mode === 'fortime') return c.capMinutes ? c.capMinutes * 60000 : null;
+    if (session.mode === 'fortime') return getCapSeconds(c) ? getCapSeconds(c)*1000 : null;
     if (session.mode === 'emom') return c.intervals * c.seconds * 1000;
     if (session.mode === 'tabata') return tabataTotalMs(c);
     return null;
@@ -415,7 +421,7 @@
 
   function description(session = current) {
     if (session.mode === 'amrap') return `${session.config.minutes} minutos`;
-    if (session.mode === 'fortime') return `${session.config.targetRounds ? session.config.targetRounds + ' rondas · ' : ''}${session.config.capMinutes ? `Cap: ${session.config.capMinutes} min` : 'Sin tiempo límite'}`;
+    if (session.mode === 'fortime') return `${session.config.targetRounds ? session.config.targetRounds + ' rondas · ' : ''}${getCapSeconds(session.config) ? `Cap: ${format(getCapSeconds(session.config)*1000).replace(/\.0$/,'')}` : 'Sin tiempo límite'}`;
     if (session.mode === 'emom') return `${session.config.intervals} intervalos de ${session.config.seconds} s`;
     if (session.mode === 'tabata') return `${session.config.rounds} rondas · ${session.config.work} s trabajo / ${session.config.rest} s descanso${session.config.blocks>1?` · ${session.config.blocks} bloques con ${session.config.breakSeconds||0} s entre bloques`:''}`;
     return '';
@@ -600,7 +606,7 @@
       const target=current.config.targetRounds;
       const count=target?`${current.splits.length}/${target} rondas`:`${current.splits.length} vueltas`;
       $('wodScore').textContent = finished ? (reason ? `CAP · ${format(t)}` : format(t)) : count;
-      $('wodResultDetails').textContent = finished ? `${count}${target?(current.finishReason==='goal'?' · Completado':' · Incompleto'+(reason?' (CAP)':' · Finalización manual')):' registradas'}` : (current.config.capMinutes ? 'Cuenta ascendente con cap' : 'Cuenta ascendente sin límite');
+      $('wodResultDetails').textContent = finished ? `${count}${target?(current.finishReason==='goal'?' · Completado':' · Incompleto'+(reason?' (CAP)':' · Finalización manual')):' registradas'}` : (getCapSeconds(current.config) ? 'Cuenta ascendente con cap' : 'Cuenta ascendente sin límite');
     } else if (current.mode === 'emom') {
       $('wodScore').textContent = `${current.doneIntervals.length} / ${current.config.intervals} completados`;
       $('wodResultDetails').textContent = finished ? `Duración: ${format(t)}` : 'Marca HECHO dentro de cada intervalo';
@@ -673,9 +679,9 @@
       if (minutes === null) return notice('Duración: de 1 a 180 minutos');
       config = { minutes };
     } else if (mode === 'fortime') {
-      const capMinutes = integer('forTimeCap', 0, 60);
-      if (capMinutes === null) return notice('Cap no válido');
-      config = { capMinutes };
+      const minutes=integer('forTimeCapMinutes',0,60), seconds=integer('forTimeCapSeconds',0,59);
+      if(minutes===null||seconds===null||minutes*60+seconds>3600||$('forTimeCapMinutes').value===''||$('forTimeCapSeconds').value==='')return notice('CAP: introduce minutos y segundos (máx. 60:00).');
+      config={capSeconds:minutes*60+seconds};
     } else if (mode === 'emom') {
       const intervals = integer('emomIntervals', 1, 120), seconds = integer('emomSeconds', 10, 600);
       if (intervals === null || seconds === null) return notice('Intervalos o segundos no válidos');
@@ -699,7 +705,7 @@
     const c = session.config;
     const valid = (x, min, max) => Number.isInteger(x) && x >= min && x <= max;
     if (session.mode === 'amrap' && !valid(c.minutes, 1, 180)) return false;
-    if (session.mode === 'fortime' && (!valid(c.capMinutes, 0, 60) || (c.targetRounds!==undefined && (!valid(c.targetRounds,1,100)||session.splits.length>c.targetRounds)))) return false;
+    if (session.mode === 'fortime' && (!valid(getCapSeconds(c), 0, 3600) || (c.targetRounds!==undefined && (!valid(c.targetRounds,1,100)||session.splits.length>c.targetRounds)))) return false;
     if (session.mode === 'emom' && !(valid(c.intervals, 1, 120) && valid(c.seconds, 10, 600))) return false;
     if (session.mode === 'emom' && session.doneIntervals.some(x => x > c.intervals)) return false;
     if (session.mode === 'tabata' && !(valid(c.rounds, 1, 60) && valid(c.work, 5, 600) && valid(c.rest, 5, 600))) return false;

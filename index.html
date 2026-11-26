@@ -126,7 +126,7 @@
 
     <section id="modeSelectScreen" class="mode-picker" hidden aria-labelledby="modePickerHeading">
       <div class="mode-intro">
-        <div class="eyebrow">CONTADOR WOD 2.2.5</div>
+        <div class="eyebrow">CONTADOR WOD 2.2.6</div>
         <h2 id="modePickerHeading">¿Qué vas a entrenar?</h2>
         <p>Elige una modalidad y configura el cronómetro.</p>
       </div>
@@ -140,7 +140,9 @@
       <section id="wodConfig" class="wod-panel" hidden>
         <h3 id="configTitle">Configurar entrenamiento</h3>
         <div class="config-row" data-config="amrap"><label for="amrapMinutes">Duración (minutos)</label><input id="amrapMinutes" type="number" min="1" max="180" step="1" value="20" inputmode="numeric"></div>
-        <div class="config-row" data-config="fortime"><label for="forTimeCap">Tiempo máximo (cap)</label><select id="forTimeCap"><option value="0">Sin límite</option><option value="10">10 minutos</option><option value="15">15 minutos</option><option value="20">20 minutos</option><option value="30">30 minutos</option><option value="40">40 minutos</option><option value="60">60 minutos</option></select></div>
+        <div class="config-row" data-config="fortime"><label for="forTimeCapMinutes">CAP · minutos</label><input id="forTimeCapMinutes" type="number" min="0" max="60" step="1" value="0" inputmode="numeric"></div>
+        <div class="config-row" data-config="fortime"><label for="forTimeCapSeconds">CAP · segundos</label><input id="forTimeCapSeconds" type="number" min="0" max="59" step="1" value="0" inputmode="numeric"></div>
+        <p class="mode-note" data-config="fortime">00:00 = sin límite. Máximo 60:00.</p>
         <div class="config-row" data-config="emom"><label for="emomIntervals">Número de intervalos</label><input id="emomIntervals" type="number" min="1" max="120" step="1" value="12" inputmode="numeric"></div>
         <div class="config-row" data-config="emom"><label for="emomSeconds">Segundos por intervalo</label><input id="emomSeconds" type="number" min="10" max="600" step="5" value="60" inputmode="numeric"></div>
         <div class="config-row" data-config="tabata"><label for="tabataRounds">Rondas</label><input id="tabataRounds" type="number" min="1" max="60" step="1" value="8" inputmode="numeric"></div>
@@ -247,7 +249,7 @@
       </div>
       <p class="wod-note">Los avisos sonoros dependen de iOS y de que la aplicación esté visible. No son alarmas en segundo plano.</p>
     </section>
-    <p class="footer">La sesión se guarda en este dispositivo · <span id="offlineStatus">Preparando modo sin conexión…</span><br>Contador WOD 2.2.5 · Beta</p>
+    <p class="footer">La sesión se guarda en este dispositivo · <span id="offlineStatus">Preparando modo sin conexión…</span><br>Contador WOD 2.2.6 · Beta</p>
   </main>
 
   <dialog id="confirmDialog" aria-labelledby="dialogTitle">
