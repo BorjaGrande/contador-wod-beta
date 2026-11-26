@@ -126,7 +126,7 @@
 
     <section id="modeSelectScreen" class="mode-picker" hidden aria-labelledby="modePickerHeading">
       <div class="mode-intro">
-        <div class="eyebrow">CONTADOR WOD 2.2 · BETA</div>
+        <div class="eyebrow">CONTADOR WOD 2.2.4</div>
         <h2 id="modePickerHeading">¿Qué vas a entrenar?</h2>
         <p>Elige una modalidad y configura el cronómetro.</p>
       </div>
@@ -148,6 +148,7 @@
         <div class="config-row" data-config="tabata"><label for="tabataRest">Descanso (segundos)</label><input id="tabataRest" type="number" min="5" max="600" step="5" value="10" inputmode="numeric"></div>
         <button id="prepareWodBtn" class="prepare-btn" type="button">PREPARAR ENTRENAMIENTO</button>
       </section>
+      <label class="wake-toggle countdown-toggle"><input id="countdownPicker" type="checkbox" checked> Cuenta atrás inicial de 10 s</label>
       <label class="wake-toggle"><input id="keepScreenPicker" type="checkbox" checked> Mantener pantalla encendida mientras corre el tiempo</label>
       <p class="mode-note">Las sesiones se guardan en este dispositivo. Los avisos sonoros requieren la aplicación visible.</p>
     </section>
@@ -171,6 +172,7 @@
       </button>
     </div>
     <p class="help">Mantén FINALIZAR 3 segundos para reiniciar. Si lo tocas, se pedirá confirmación.</p>
+    <label class="wake-toggle countdown-toggle"><input id="countdownLegacy" type="checkbox" checked> Cuenta atrás inicial de 10 s</label>
     <label class="wake-toggle"><input id="keepScreenLegacy" type="checkbox" checked> Mantener pantalla encendida</label>
 
     <section aria-label="Estadísticas" class="stats">
@@ -204,12 +206,20 @@
         <div class="wod-progress"><div id="wodProgressFill"></div></div>
         <div id="wodPhase" class="wod-phase">Ronda 1</div>
         <div id="wodSubTime" class="lap-time">00:00.0</div>
+        <div id="wodActiveExercise" class="wod-active-exercise" hidden><span id="wodActiveLabel" class="stat-name"></span><strong id="wodActiveText"></strong></div>
         <button id="wodMainBtn" type="button" class="main-button" aria-label="Iniciar entrenamiento"><span id="wodMainText" class="main-text">INICIAR</span><span id="wodMainSub" class="main-sub">Toca para empezar</span></button>
       </section>
       <div class="buttons">
         <button id="wodPauseBtn" type="button" class="secondary pause" disabled>PAUSAR</button>
         <button id="wodFinishBtn" type="button" class="secondary reset" disabled>FINALIZAR WOD</button>
       </div>
+      <details id="wodExercisePanel" class="wod-panel wod-exercise-panel" open hidden>
+        <summary>Ejercicios del WOD <span id="wodExerciseCount" class="count"></span></summary>
+        <div id="wodExerciseTitle" class="wod-exercise-title"></div>
+        <ol id="wodExerciseList" class="wod-exercise-list"></ol>
+        <p id="wodExerciseHint" class="wod-note"></p>
+      </details>
+      <label class="wake-toggle countdown-toggle"><input id="countdownWod" type="checkbox" checked> Cuenta atrás inicial de 10 s</label>
       <label class="wake-toggle"><input id="keepScreenWod" type="checkbox" checked> Mantener pantalla encendida</label>
       <div class="wod-panel wod-summary" id="wodScorePanel">
         <div class="stat-name">RESULTADO</div>
@@ -217,6 +227,17 @@
         <div id="wodResultDetails" class="wod-result-detail"></div>
         <div id="repsBox" class="config-row" hidden><label for="extraReps">Repeticiones adicionales</label><input id="extraReps" type="number" min="0" max="999" step="1" value="0" inputmode="numeric"></div>
       </div>
+      <section id="wodPerformance" class="wod-panel wod-performance" hidden aria-label="Estadísticas del entrenamiento">
+        <h3 id="wodPerformanceTitle">Estadísticas de rondas</h3>
+        <div id="wodPerformanceGrid" class="wod-performance-grid"></div>
+        <p id="wodPerformanceNote" class="wod-note"></p>
+        <details id="wodPacePanel" open hidden>
+          <summary>Ritmo por ronda</summary>
+          <div id="wodPaceList" class="wod-pace-list"></div>
+        </details>
+      </section>
+      <a id="sendWodResultBtn" class="wod-result-send" href="#" hidden>Enviar resultado al Generador WOD</a>
+      <p id="sendWodResultHint" class="wod-result-send-hint" hidden>Se abrirá una ficha en el Generador con el resultado medido. Antes de guardarlo completarás RPE, pesos y sensaciones.</p>
       <div class="section-head"><span class="section-title" id="wodHistoryTitle">Registro</span><span id="wodCount" class="count">0 rondas</span></div>
       <ol id="wodHistory" class="lap-list"><li class="empty">Comienza tu sesión para registrar el entrenamiento.</li></ol>
       <div class="tools">
@@ -226,7 +247,7 @@
       </div>
       <p class="wod-note">Los avisos sonoros dependen de iOS y de que la aplicación esté visible. No son alarmas en segundo plano.</p>
     </section>
-    <p class="footer">La sesión se guarda en este dispositivo · <span id="offlineStatus">Preparando modo sin conexión…</span><br>Contador WOD 2.2 · Beta</p>
+    <p class="footer">La sesión se guarda en este dispositivo · <span id="offlineStatus">Preparando modo sin conexión…</span><br>Contador WOD 2.2.4 · Beta</p>
   </main>
 
   <dialog id="confirmDialog" aria-labelledby="dialogTitle">
@@ -240,8 +261,9 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script>
-  // Conserva la clave y el estado del contador 2.1: solo se añade un ajuste opcional.
-  try { window.contadorWakeEnabled = JSON.parse(localStorage.getItem('contador-wod-v2.2-preferences-beta-preview') || '{}').keepAwake !== false; }
+  // Conserva las claves de estado de 2.1 y preferencias de 2.2.
+  // La cuenta atrás es una preferencia compartida, NO parte del tiempo del WOD.
+  try { window.contadorWakeEnabled = JSON.parse(localStorage.getItem('contador-wod-v2.2-preferences') || '{}').keepAwake !== false; }
   catch (_) { window.contadorWakeEnabled = true; }
   </script>
   <script>
@@ -256,7 +278,7 @@
     const undoBtn = $('undoBtn'), exportBtn = $('exportBtn'), soundBtn = $('soundBtn');
     const dialog = $('confirmDialog'), toastEl = $('toast');
 
-    const STORAGE_KEY = 'contador-vueltas-v2-beta-preview';
+    const STORAGE_KEY = 'contador-vueltas-v2';
     let state = 'idle';             // idle | running | paused
     let elapsedBeforeRun = 0;      // milisegundos acumulados antes de arrancar
     let monotonicStart = 0;        // marca de performance.now() al arrancar
@@ -400,6 +422,16 @@
       soundBtn.textContent = soundEnabled ? 'SONIDO' : 'SILENCIO';
       soundBtn.setAttribute('aria-label', soundEnabled ? 'Desactivar sonido' : 'Activar sonido');
       renderClock();
+      const preparacion = window.contadorPrestart?.remaining('legacy');
+      if (preparacion !== null && preparacion !== undefined) {
+        statusText.textContent = 'CUENTA ATRÁS DE SALIDA';
+        timerEl.textContent = `00:${String(preparacion).padStart(2, '0')}.0`;
+        currentLapEl.textContent = '00:00.0';
+        mainText.textContent = 'CANCELAR';
+        mainSub.textContent = 'Cancelar cuenta atrás';
+        mainBtn.setAttribute('aria-label', 'Cancelar cuenta atrás');
+        mainBtn.classList.add('prestarting');
+      } else mainBtn.classList.remove('prestarting');
     }
 
     function renderLaps() {
@@ -449,8 +481,19 @@
       renderUI();
     }
 
-    function start() {
+    function start(skipCountdown = false) {
       if (state === 'running') return;
+      const prep = window.contadorPrestart;
+      if (prep?.active('legacy')) { prep.cancel(); return; }
+      if (!skipCountdown && state === 'idle' && prep?.enabled()) {
+        prep.begin('legacy', {
+          onTick: (seconds) => { renderUI(); if (seconds <= 3) beep(760, .08); },
+          onGo: () => start(true),
+          onCancel: () => renderUI()
+        });
+        beep(650, .05); // Desbloquea audio en respuesta directa al toque en iOS.
+        return;
+      }
       monotonicStart = performance.now();
       wallStart = Date.now();
       state = 'running';
@@ -483,6 +526,7 @@
     }
 
     function reset() {
+      window.contadorPrestart?.cancel();
       cancelHold();
       cancelAnimationFrame(rafId); letSleep();
       state = 'idle'; elapsedBeforeRun = 0; monotonicStart = 0; wallStart = 0; splits = [];

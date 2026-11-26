@@ -1,4 +1,4 @@
-/* Contador WOD 2.2.0-beta — ampliación visual no destructiva de 2.1 */
+/* Contador WOD 2.2.0 — ampliación visual no destructiva de 2.1 */
 [hidden] { display: none !important; }
 .top-actions { display: flex; align-items: center; gap: 7px; }
 .top-actions .icon-btn { min-width: 67px; padding-inline: 9px; }
@@ -40,3 +40,31 @@
 .wod-screen.resting .wod-phase { color: #ffc27b; }
 .wod-screen .status.finished .dot { background: #6aaaff; }
 @media (max-width: 350px) { .top-actions .icon-btn { min-width: 58px; padding: 4px 6px; } .mode-tile { padding: 13px 10px; } .config-row input { width: 100px; } }
+
+/* v2.2.2 · opción de salida configurada */
+.countdown-toggle { margin-top: 15px; padding: 11px 12px; border: 1px solid #335f54; border-radius: 13px; background: #13332d80; color: #e0fff3; font-size: .85rem; font-weight: 750; cursor: pointer; }
+.countdown-toggle input { width: 21px; height: 21px; }
+.main-button.prestarting { background: linear-gradient(145deg, #ffd497, #eea956 60%, #bd7835); border-color: #644a26; color: #38250e; }
+
+.wod-result-send{display:block;text-align:center;text-decoration:none;margin:14px 0 4px;padding:15px 12px;border-radius:14px;background:#43e7b0;color:#063c2e;font-weight:900;min-height:52px;letter-spacing:.01em}.wod-result-send:focus-visible{outline:3px solid #fff;outline-offset:3px}.wod-result-send-hint{font-size:.75rem;color:var(--muted);line-height:1.45;margin:5px 0 14px}
+
+/* v2.2.4 Beta · ficha de ejercicios y parciales */
+.wod-active-exercise{width:100%;margin-top:10px;padding:9px 12px;border:1px solid #335f54;border-radius:12px;background:#13332d80;text-align:center;overflow-wrap:anywhere}
+.wod-active-exercise strong{display:block;font-size:.91rem;margin-top:4px;color:#e0fff3}
+.wod-exercise-panel summary,.wod-performance summary{cursor:pointer;min-height:34px;font-weight:800;line-height:1.5;touch-action:manipulation}
+.wod-exercise-panel summary .count{float:right;margin-left:6px}
+.wod-exercise-title{font-weight:750;color:var(--muted);font-size:.85rem;margin:6px 0;overflow-wrap:anywhere}
+.wod-exercise-list{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.wod-exercise-list li{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px;border:1px solid var(--line);border-radius:9px;font-size:.85rem;overflow-wrap:anywhere}
+.wod-exercise-list li span{flex:1;min-width:0}.wod-exercise-list li strong{max-width:48%;text-align:right;color:#a8d3ff;overflow-wrap:anywhere}
+.wod-exercise-list li.active-exercise{border-color:var(--green);background:#13332d80}
+.wod-exercise-panel .wod-note,.wod-performance .wod-note{margin:8px 0 0}
+.wod-performance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.wod-performance-grid .stat-name{letter-spacing:.035em;line-height:1.35}
+.wod-performance-grid .stat-value{white-space:normal;overflow-wrap:anywhere}
+.wod-performance details{margin-top:14px}
+.wod-pace-list{display:grid;gap:8px;max-height:260px;overflow:auto;overscroll-behavior:contain;font-variant-numeric:tabular-nums}
+.wod-pace-row{display:grid;grid-template-columns:2ch minmax(0,1fr) 7.2ch 8.2ch;gap:5px;align-items:center;font-size:.73rem}
+.wod-pace-track{height:9px;background:#26364b;border-radius:8px;overflow:hidden}
+.wod-pace-bar{height:100%;border-radius:8px;background:#6aaaff}.wod-pace-bar.fast{background:var(--green)}.wod-pace-bar.slow{background:var(--red)}
+.wod-pace-row strong,.wod-pace-delta{text-align:right}.wod-pace-delta{color:var(--muted)}
