@@ -1,3 +1,13 @@
+# Contador WOD 2.2.5 Beta — Finalización FOR TIME por rondas
+
+Actualización sobre 2.2.4 Beta. Los enlaces nuevos del Generador 1.0.21 Beta incluyen el objetivo de rondas. El contador muestra el progreso, termina al registrar la última ronda y conserva exactamente su tiempo como resultado. El botón de registro queda desactivado. CAP o detención manual anterior al objetivo: resultado incompleto. Los FOR TIME independientes o enlaces antiguos sin objetivo siguen permitiendo finalizar manualmente. No se altera la clave de sesión ni se reinterpretan los entrenamientos históricos. No se modifica el cronómetro TABATA, EMOM, AMRAP ni el modo Vueltas original.
+
+Instalación: finalizar/exportar las sesiones necesarias, subir los nueve archivos de este ZIP a la raíz de `contador-wod-beta`, después actualizar el Generador a 1.0.21 Beta. No borrar almacenamiento ni publicar en la versión estable. Comprobar el pie de versión con conexión.
+
+Validación: sintaxis JavaScript y pruebas Node.js con DOM simulado de objetivo, quinto registro exacto, bloqueo de sexta ronda, persistencia, CAP, finalización manual, enlaces antiguos, transferencia y regresión de AMRAP, EMOM y TABATA. La navegación local de Chromium está bloqueada por el entorno. Pendiente de validar en iPhone/Safari, caché real y guardado definitivo del resultado en la interfaz. No publicado en GitHub.
+
+---
+
 # Contador WOD 2.2.4 Beta — Ejercicios y estadísticas
 
 Basado en la v2.2.3 adjuntada. Conserva las claves locales de sesión y preferencias, el contador de vueltas original, la cuenta atrás opcional, los cronómetros y el protocolo de importación y devolución de resultados al Generador.
