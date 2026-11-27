@@ -1,4 +1,4 @@
-/* Contador WOD 2.2.6 Beta: ejercicios y estadísticas de rendimiento. */
+/* Contador WOD 2.2.7 Beta: ejercicios y estadísticas de rendimiento. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -20,7 +20,6 @@
   let current = null;
   let rafId = 0;
   let monotonicStart = 0;
-  let wakeLock = null;
   let audioCtx = null;
   let lastCuePhase = null;
   let lastCueSecond = null;
@@ -206,15 +205,24 @@
 
   function updatePreferencesUI() {
     for (const id of ['keepScreenPicker', 'keepScreenLegacy', 'keepScreenWod']) $(id).checked = prefs.keepAwake;
-    for (const id of ['countdownPicker', 'countdownLegacy', 'countdownWod']) $(id).checked = prefs.startCountdown10;
+    for (const id of ['countdownPicker', 'countdownLegacy', 'countdownWod']) {
+      const el = $(id); el.checked = prefs.startCountdown10;
+      el.disabled = countdownLocked(id);
+      el.parentElement.classList.toggle('countdown-locked', el.disabled);
+    }
     wodSoundBtn.textContent = prefs.wodSound ? 'SONIDO' : 'SILENCIO';
     wodSoundBtn.setAttribute('aria-label', prefs.wodSound ? 'Desactivar sonido de WOD' : 'Activar sonido de WOD');
   }
 
-  function setCountdownEnabled(enabled) {
+  function countdownLocked(id) {
+    if (id === 'countdownLegacy') return Boolean(window.contadorLegacyCountdownLocked?.());
+    if (id === 'countdownWod') return Boolean(prestartApi.active('wod') || (current && current.status !== 'ready'));
+    return Boolean(prestartApi.active() || (current && ['running','paused'].includes(current.status)) || window.contadorLegacyCountdownLocked?.());
+  }
+  function setCountdownEnabled(enabled, id) {
+    if (countdownLocked(id)) { updatePreferencesUI(); return; }
     prefs.startCountdown10 = enabled;
     safeWrite(PREFERENCES_KEY, prefs);
-    if (!enabled) prestartApi.cancel();
     updatePreferencesUI();
   }
 
@@ -224,24 +232,12 @@
     safeWrite(PREFERENCES_KEY, prefs);
     updatePreferencesUI();
     document.dispatchEvent(new Event('contador-wake-change'));
-    if (current?.status === 'running' && currentScreen === 'wod' && enabled) keepAwake();
-    else if (!enabled) releaseWake();
   }
 
-  async function keepAwake() {
-    if (!prefs.keepAwake || currentScreen !== 'wod' || current?.status !== 'running' || document.hidden || !('wakeLock' in navigator) || wakeLock) return;
-    try {
-      const lock = await navigator.wakeLock.request('screen');
-      if (!prefs.keepAwake || currentScreen !== 'wod' || current?.status !== 'running' || document.hidden) { await lock.release(); return; }
-      wakeLock = lock;
-      lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
-    } catch (_) { /* iOS puede denegar la solicitud, por ejemplo con ahorro de batería */ }
+  function keepAwake() {
+    if (currentScreen === 'wod' && (current?.status === 'running' || prestartApi.active('wod'))) window.contadorWake.start('wod');
   }
-  function releaseWake() {
-    if (!wakeLock) return;
-    const lock = wakeLock; wakeLock = null;
-    lock.release().catch(() => {});
-  }
+  function releaseWake() { window.contadorWake.stop('wod'); }
 
   function sound(frequency = 930, duration = 0.09) {
     if (!prefs.wodSound || document.hidden) return;
@@ -251,7 +247,7 @@
       if (!audioCtx || audioCtx.state === 'closed') audioCtx = new Audio();
       const ctx = audioCtx;
       const play = () => {
-        if (ctx !== audioCtx || ctx.state !== 'running') return;
+        if (document.hidden || ctx !== audioCtx || ctx.state !== 'running') return;
         const o = ctx.createOscillator();
         const g = ctx.createGain();
         o.type = 'sine'; o.frequency.value = frequency;
@@ -338,11 +334,11 @@
     current.finishReason = reason;
     current.finishedAt = Date.now();
     cancelAnimationFrame(rafId);
+    sound(660, .34);
     releaseWake();
     resetCues();
     persist();
     renderAll();
-    sound(660, .34);
     vibrate([40, 40, 70]);
   }
 
@@ -371,18 +367,21 @@
       prestartApi.begin('wod', {
         onTick: seconds => { renderUI(); if (seconds <= 3) sound(760, .08); },
         onGo: () => start(true),
-        onCancel: () => renderUI()
+        onCancel: () => { releaseWake(); renderUI(); }
       });
       sound(650, .05); // Desbloquea el audio mediante el toque del usuario.
+      keepAwake();
       return;
     }
     current.status = 'running';
     current.wallStart = Date.now();
     monotonicStart = performance.now();
+    sound(880);
+    keepAwake();
     persist();
     resetCues();
     renderAll();
-    tick(); keepAwake(); sound(880); vibrate(22);
+    tick(); vibrate(22);
   }
   function pause() {
     if (!current || current.status !== 'running') return;
@@ -570,6 +569,7 @@
 
   function renderUI() {
     if (!current) return;
+    updatePreferencesUI();
     const status = current.status;
     const running = status === 'running';
     const active = running || status === 'paused';
@@ -668,6 +668,7 @@
     soundBtn.hidden = screen !== 'legacy';
     wodSoundBtn.hidden = screen !== 'wod';
     $('appTitle').textContent = screen === 'legacy' ? 'Contador de vueltas' : 'Contador WOD';
+    updatePreferencesUI();
     if (screen !== 'wod') releaseWake();
     if (screen === 'wod') { renderAll(); if (current?.status === 'running') keepAwake(); }
   }
@@ -786,7 +787,7 @@
     loadPreferences();
     loadSession();
     for (const id of ['keepScreenPicker', 'keepScreenLegacy', 'keepScreenWod']) $(id).addEventListener('change', e => setWakeEnabled(e.target.checked));
-    for (const id of ['countdownPicker', 'countdownLegacy', 'countdownWod']) $(id).addEventListener('change', e => setCountdownEnabled(e.target.checked));
+    for (const id of ['countdownPicker', 'countdownLegacy', 'countdownWod']) $(id).addEventListener('change', e => setCountdownEnabled(e.target.checked, id));
     wodSoundBtn.addEventListener('click', () => {
       prefs.wodSound = !prefs.wodSound;
       safeWrite(PREFERENCES_KEY, prefs); updatePreferencesUI();
@@ -848,10 +849,9 @@
       if (event.code === 'Space') { event.preventDefault(); if (current.status === 'running') record(); else if (['ready', 'paused'].includes(current.status)) start(); }
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { releaseWake(); resetCues(); }
+      if (document.hidden) { resetCues(); }
       else if (currentScreen === 'wod' && current?.status === 'running') { keepAwake(); tick(); }
     });
-    window.addEventListener('pagehide', releaseWake);
     const legacy = safeRead(LEGACY_KEY);
     // No tocar el contador original 2.1 si está en marcha.
     if (legacy && (legacy.state === 'running' || legacy.state === 'paused')) {

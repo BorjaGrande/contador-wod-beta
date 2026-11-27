@@ -68,3 +68,9 @@
 .wod-pace-track{height:9px;background:#26364b;border-radius:8px;overflow:hidden}
 .wod-pace-bar{height:100%;border-radius:8px;background:#6aaaff}.wod-pace-bar.fast{background:var(--green)}.wod-pace-bar.slow{background:var(--red)}
 .wod-pace-row strong,.wod-pace-delta{text-align:right}.wod-pace-delta{color:var(--muted)}
+
+.countdown-toggle.countdown-locked { opacity: .57; background: #222b38; border-color: #3a4350; color: #a4adba; cursor: not-allowed; }
+.countdown-toggle input:disabled { accent-color: #7d8794; cursor: not-allowed; }
+.wake-status { margin: 4px 0 12px; font-size: .79rem; color: #9eafc5; }
+.wake-status[data-state="active"] { color: #84d9bb; }
+.wake-status[data-state="blocked"], .wake-status[data-state="unsupported"] { color: #f2c487; }

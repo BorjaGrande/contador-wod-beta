@@ -1,13 +1,14 @@
-/* Contador WOD 2.2.6 — almacenamiento offline de la versión beta. */
+/* Contador WOD 2.2.7 — almacenamiento offline de la versión beta. */
 // Aísla la caché por repositorio/ruta: dos apps Pages del mismo usuario comparten origen.
 const SCOPE_ID = new URL(self.registration.scope).pathname.replace(/[^a-z0-9]/gi, '_');
 const CACHE_PREFIX = `contador-wod-${SCOPE_ID}-`;
-const CACHE_NAME = `${CACHE_PREFIX}v2.2.6`;
+const CACHE_NAME = `${CACHE_PREFIX}v2.2.7`;
 const OFFLINE_FILES = [
   './',
   './index.html',
   './modes.css',
   './modes.js',
+  './wake.js',
   './manifest.webmanifest',
   './icon-180.png',
   './icon-192.png',

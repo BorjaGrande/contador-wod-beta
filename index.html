@@ -126,7 +126,7 @@
 
     <section id="modeSelectScreen" class="mode-picker" hidden aria-labelledby="modePickerHeading">
       <div class="mode-intro">
-        <div class="eyebrow">CONTADOR WOD 2.2.6</div>
+        <div class="eyebrow">CONTADOR WOD 2.2.7</div>
         <h2 id="modePickerHeading">¿Qué vas a entrenar?</h2>
         <p>Elige una modalidad y configura el cronómetro.</p>
       </div>
@@ -176,6 +176,7 @@
     <p class="help">Mantén FINALIZAR 3 segundos para reiniciar. Si lo tocas, se pedirá confirmación.</p>
     <label class="wake-toggle countdown-toggle"><input id="countdownLegacy" type="checkbox" checked> Cuenta atrás inicial de 10 s</label>
     <label class="wake-toggle"><input id="keepScreenLegacy" type="checkbox" checked> Mantener pantalla encendida</label>
+      <p class="wake-status" data-wake-status role="status" hidden></p>
 
     <section aria-label="Estadísticas" class="stats">
       <div class="stat"><div class="stat-name">ÚLTIMA</div><div id="lastStat" class="stat-value">—</div></div>
@@ -223,6 +224,7 @@
       </details>
       <label class="wake-toggle countdown-toggle"><input id="countdownWod" type="checkbox" checked> Cuenta atrás inicial de 10 s</label>
       <label class="wake-toggle"><input id="keepScreenWod" type="checkbox" checked> Mantener pantalla encendida</label>
+      <p class="wake-status" data-wake-status role="status" hidden></p>
       <div class="wod-panel wod-summary" id="wodScorePanel">
         <div class="stat-name">RESULTADO</div>
         <div id="wodScore" class="wod-score">Sin comenzar</div>
@@ -249,7 +251,7 @@
       </div>
       <p class="wod-note">Los avisos sonoros dependen de iOS y de que la aplicación esté visible. No son alarmas en segundo plano.</p>
     </section>
-    <p class="footer">La sesión se guarda en este dispositivo · <span id="offlineStatus">Preparando modo sin conexión…</span><br>Contador WOD 2.2.6 · Beta</p>
+    <p class="footer">La sesión se guarda en este dispositivo · <span id="offlineStatus">Preparando modo sin conexión…</span><br>Contador WOD 2.2.7 · Beta</p>
   </main>
 
   <dialog id="confirmDialog" aria-labelledby="dialogTitle">
@@ -268,6 +270,7 @@
   try { window.contadorWakeEnabled = JSON.parse(localStorage.getItem('contador-wod-v2.2-preferences') || '{}').keepAwake !== false; }
   catch (_) { window.contadorWakeEnabled = true; }
   </script>
+  <script src="./wake.js"></script>
   <script>
   (() => {
     'use strict';
@@ -287,7 +290,6 @@
     let wallStart = 0;             // marca de Date.now() para recuperar tras recargar
     let splits = [];              // tiempos totales de cada vuelta (ms)
     let rafId = 0;
-    let wakeLock = null;
     let soundEnabled = true;
     let audioCtx = null;
     let toastTimer = 0;
@@ -346,30 +348,21 @@
       } catch (_) { /* sesión nueva si los datos están dañados */ }
     }
 
-    async function keepAwake() {
-      try {
-        if (state === 'running' && window.contadorWakeEnabled !== false && 'wakeLock' in navigator && !wakeLock) {
-          const lock = await navigator.wakeLock.request('screen');
-          if (state !== 'running') { await lock.release(); return; }
-          wakeLock = lock;
-          lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
-        }
-      } catch (_) { /* no disponible en todos los navegadores */ }
+    function keepAwake() {
+      if (state === 'running' || window.contadorPrestart?.active('legacy')) window.contadorWake.start('legacy');
     }
-
-    function letSleep() {
-      if (wakeLock) { const lock = wakeLock; wakeLock = null; lock.release().catch(() => {}); }
-    }
+    function letSleep() { window.contadorWake.stop('legacy'); }
+    window.contadorLegacyCountdownLocked = () => state !== 'idle' || Boolean(window.contadorPrestart?.active('legacy'));
 
     function beep(frequency = 920, duration = .08) {
-      if (!soundEnabled) return;
+      if (!soundEnabled || document.hidden) return;
       try {
         const Audio = window.AudioContext || window.webkitAudioContext;
         if (!Audio) return;
         if (!audioCtx || audioCtx.state === 'closed') audioCtx = new Audio();
         const context = audioCtx;
         function play() {
-          if (context !== audioCtx || context.state !== 'running') return;
+          if (document.hidden || context !== audioCtx || context.state !== 'running') return;
           const oscillator = context.createOscillator();
           const gain = context.createGain();
           oscillator.type = 'sine'; oscillator.frequency.value = frequency;
@@ -424,6 +417,9 @@
       soundBtn.textContent = soundEnabled ? 'SONIDO' : 'SILENCIO';
       soundBtn.setAttribute('aria-label', soundEnabled ? 'Desactivar sonido' : 'Activar sonido');
       renderClock();
+      const countdown = $('countdownLegacy');
+      countdown.disabled = window.contadorLegacyCountdownLocked();
+      countdown.parentElement.classList.toggle('countdown-locked', countdown.disabled);
       const preparacion = window.contadorPrestart?.remaining('legacy');
       if (preparacion !== null && preparacion !== undefined) {
         statusText.textContent = 'CUENTA ATRÁS DE SALIDA';
@@ -491,16 +487,18 @@
         prep.begin('legacy', {
           onTick: (seconds) => { renderUI(); if (seconds <= 3) beep(760, .08); },
           onGo: () => start(true),
-          onCancel: () => renderUI()
+          onCancel: () => { letSleep(); renderUI(); }
         });
+        keepAwake();
         beep(650, .05); // Desbloquea audio en respuesta directa al toque en iOS.
         return;
       }
       monotonicStart = performance.now();
       wallStart = Date.now();
       state = 'running';
+      keepAwake();
       save(); renderUI();
-      cancelAnimationFrame(rafId); tick(); keepAwake();
+      cancelAnimationFrame(rafId); tick();
       beep(880); vibrate(20);
     }
 
@@ -632,8 +630,8 @@
         renderClock();
       }
     });
-    window.addEventListener('pagehide', letSleep);
-    document.addEventListener('contador-wake-change', () => { if (window.contadorWakeEnabled === false) letSleep(); else keepAwake(); });
+
+
 
     load();
     renderLaps();

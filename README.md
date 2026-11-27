@@ -1,3 +1,13 @@
+# Contador WOD 2.2.7 Beta — protección de pantalla y cuenta atrás
+
+Base: 2.2.6 Beta. Solicita Screen Wake Lock desde el toque de INICIAR, también durante la preparación, tanto en modo Vueltas como en los cuatro modos WOD. Usa un controlador compartido, evita solicitudes simultáneas, recupera el bloqueo tras volver a la página y reintenta cuando se libera o se deniega. Muestra protección activa, permiso no concedido o navegador incompatible. Libera el bloqueo al pausar, cancelar, finalizar o reiniciar. La cuenta atrás queda bloqueada y en gris durante la preparación, ejecución, pausa y al finalizar; vuelve a estar disponible al cancelar la preparación o reiniciar. Se conserva la preferencia del usuario. Los avisos sonoros se intentan en primer plano antes de solicitar o liberar la protección de pantalla; iOS puede suspender el audio y no se garantizan avisos con pantalla bloqueada o en segundo plano.
+
+Instalación: subir los diez archivos de este ZIP a la raíz del repositorio `contador-wod-beta`, incluido el nuevo `wake.js`; abrir con conexión y recargar hasta ver 2.2.7 Beta. Mantener Generador 1.0.22 Beta sin cambios. No borrar datos ni modificar las versiones estables. Se conservan las claves de sesión, preferencias y protocolo de transferencia.
+
+Validación: sintaxis JavaScript y pruebas con DOM, reloj y Screen Wake Lock simulados: importación FOR TIME, preparación, cancelación, pausa, reanudación, cambio de visibilidad, finalización por CAP y por objetivo, reinicio, inicio sin cuenta atrás, AMRAP, EMOM, TABATA, Vueltas, denegación, reintento y liberación espontánea. Navegación Chromium bloqueada por el entorno. Pendiente comprobar la protección de pantalla y sonido reales en iPhone, especialmente al entrar desde el Generador. No publicado en GitHub. Si iOS deniega el bloqueo de pantalla, abrir en Safari o PWA instalada y revisar el bloqueo automático.
+
+---
+
 # Contador WOD 2.2.6 Beta — CAP en segundos y transferencia precisa
 
 Base: 2.2.5 Beta validada. FOR TIME manual: CAP de 00:01 a 60:00, 00:00 sin límite. Acepta enlaces del Generador 1.0.22 con `capseconds` y antiguos con `cap` en minutos. Mantiene compatibilidad con sesiones antiguas, objetivo de rondas y finalización por CAP. Los resultados se muestran con décimas y se transmiten con milisegundos exactos. No modifica los cronómetros de otros formatos ni las claves de almacenamiento.
